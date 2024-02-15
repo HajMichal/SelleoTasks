@@ -10,7 +10,10 @@ import {
   UploadedFile,
   UseInterceptors,
   UseGuards,
+  Res,
+  Delete,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileSystemService } from './files.service';
 import { AdminHeaderGuard } from 'src/roles/roles.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -18,10 +21,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('files')
 export class FilesController {
   constructor(private readonly fileSystemService: FileSystemService) {}
-
   @Get(':path')
   async listFilesAndDirectories(
-    @Param('path') path: string,
+    @Param('path') path?: string,
     @Headers('role') role?: string,
   ): Promise<string[]> {
     return this.fileSystemService.listFilesAndDirectories(path, role);
@@ -29,11 +31,11 @@ export class FilesController {
 
   @Get('content/:path/:filename')
   getFileContent(
-    @Param('path') path: string,
     @Param('filename') fileName: string,
+    @Param('path') path?: string,
     @Headers('role') role?: string,
   ): Promise<string> {
-    return this.fileSystemService.readFileContent(path, fileName, role);
+    return this.fileSystemService.readFileContent(fileName, path, role);
   }
 
   @Post('createpath')
@@ -68,5 +70,23 @@ export class FilesController {
     video: Express.Multer.File,
   ) {
     return this.fileSystemService.saveUploadedFile(video, path);
+  }
+
+  @Get('stream/:path')
+  @UseInterceptors(FileInterceptor('video'))
+  async streamVideo(
+    @UploadedFile() video: Express.Multer.File,
+    @Res() res: Response,
+    @Param('path') path?: string,
+  ) {
+    return this.fileSystemService.streamVideo(video, res, path);
+  }
+
+  @Delete('/removefiles')
+  async removeFiles(
+    @Body('path') path: string,
+    @Headers('role') role?: string,
+  ) {
+    return this.fileSystemService.removeFiles(path, role);
   }
 }
